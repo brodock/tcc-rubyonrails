@@ -23,7 +23,8 @@ class Cenary1 < Thor
 
     url = "http://#{machine_ip}/"
 
-    concurrency = (1..5).map{|x| x*100}
+    concurrency = (1..4).map{|x| x*20}
+    concurrency += (1..5).map{|x| x*100}
     concurrency.each do |c|
         restart machine_ip, 'apache2'
         thor :benchmark, :execute, "#{url} -n 30000 -c #{c} --name=apache-#{c}"
@@ -34,20 +35,38 @@ class Cenary1 < Thor
   def graphics()
     empty_directory 'graphics'
     
-    # nginx
+    # nginx - baixa concorrência
     
-    title = 'Benchmark Nginx'
-    image = 'nginx'
-    files = Dir.glob("raw/nginx-*.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
+    title = 'Benchmark NGINX - baixa concorrência'
+    image = 'nginx-low'
+    files = Dir.glob("raw/nginx-??.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
+
+    plot_tsv(image, title, files)
+    plot_csv(image, title+' - duration', files)
+    
+    # nginx - alta concorrência
+
+    title = 'Benchmark NGINX - alta concorrência'
+    image = 'nginx-high'
+    files = Dir.glob("raw/nginx-???.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
 
     plot_tsv(image, title, files)
     plot_csv(image, title+' - duration', files)
 
-    # Apache 2
+    # Apache 2 - baixa concorrência
     
-    title = 'Benchmark Apache2'
-    image = 'apache'
-    files = Dir.glob("raw/apache-*.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
+    title = 'Benchmark Apache2 - baixa concorrência'
+    image = 'apache-low'
+    files = Dir.glob("raw/apache-??.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
+    
+    plot_tsv(image, title, files)
+    plot_csv(image, title+' - duration', files)
+    
+    # Apache 2 - alta concorrência
+    
+    title = 'Benchmark Apache2 - baixa concorrência'
+    image = 'apache-high'
+    files = Dir.glob("raw/apache-???.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
     
     plot_tsv(image, title, files)
     plot_csv(image, title+' - duration', files)
