@@ -13,6 +13,7 @@ class Benchmark < Thor
     setup
     name = 'benchmark'
     
+    say "Executando benchmark..."
     run "ab -r -n #{options[:requests]} -c #{options[:concurrency]} -g raw/#{options[:name]}.tsv -e raw/#{options[:name]}.csv #{url} > logs/#{options[:name]}.log"
   end
 
