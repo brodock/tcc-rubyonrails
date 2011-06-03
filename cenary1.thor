@@ -1,7 +1,10 @@
 class Cenary1 < Thor
   include Thor::Actions
 
+  # modelo de regexp para validar IP
   IP_PATTERN = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})?$/
+  # modelo de regexp para extrair valores do log do Apache Benchmark
+  AB_LOG_PATTERN = /^([a-zA-Z]+[\s\-a-zA-Z]+):\s+(.+)/
 
   desc 'nginx IP', 'Executa o benchmark pré-definido no endereço informado'
   def nginx(machine_ip)
@@ -34,6 +37,15 @@ class Cenary1 < Thor
   desc 'graphics', 'Realiza a geração dos gráficos a partir dos testes realizados'
   def graphics()
     empty_directory 'graphics'
+   
+    # nginx - hits
+    
+    title = 'Benchmark NGINX - Performance'
+    image = 'nginx-perf'
+    service = 'nginx'
+    files = Dir.glob("logs/nginx-*.log").map{|f| File.basename(f, '.log')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
+
+    plot_log(image, title, service, files)
     
     # nginx - baixa concorrência
     
@@ -42,7 +54,7 @@ class Cenary1 < Thor
     files = Dir.glob("raw/nginx-??.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
 
     plot_tsv(image, title, files)
-    plot_csv(image, title+' - duration', files)
+    plot_csv(image, title, files)
     
     # nginx - alta concorrência
 
@@ -51,7 +63,7 @@ class Cenary1 < Thor
     files = Dir.glob("raw/nginx-???.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
 
     plot_tsv(image, title, files)
-    plot_csv(image, title+' - duration', files)
+    plot_csv(image, title, files)
 
     # Apache 2 - baixa concorrência
     
@@ -60,16 +72,16 @@ class Cenary1 < Thor
     files = Dir.glob("raw/apache-??.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
     
     plot_tsv(image, title, files)
-    plot_csv(image, title+' - duration', files)
+    plot_csv(image, title, files)
     
     # Apache 2 - alta concorrência
     
-    title = 'Benchmark Apache2 - baixa concorrência'
+    title = 'Benchmark Apache2 - alta concorrência'
     image = 'apache-high'
     files = Dir.glob("raw/apache-???.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
     
     plot_tsv(image, title, files)
-    plot_csv(image, title+' - duration', files)
+    plot_csv(image, title, files)
   end
 
   protected
@@ -109,11 +121,11 @@ class Cenary1 < Thor
     Gnuplot.open do |gp|
       Gnuplot::Plot.new( gp ) do |plot|
         plot.terminal "pngcairo enhanced size 800,700"
-        plot.output   "graphics/#{image}-duration.png"
+        plot.output   "graphics/#{image}-grouped.png"
         plot.key      "left"
         plot.title    title
-        plot.xlabel   "requisições"
-        plot.ylabel   "tempo de resposta (ms)"
+        plot.xlabel   "% de requisições totais"
+        plot.ylabel   "tempo médio de resposta (ms)"
         plot.grid     "y"
         plot.style    "fill transparent solid 0.5 noborder"
         plot.datafile "separator ','"
@@ -134,6 +146,39 @@ class Cenary1 < Thor
     end
   end
   
+  def plot_log(image, title, service, datafiles)
+    require 'gnuplot'
+    
+      Gnuplot.open do |gp|
+        Gnuplot::Plot.new( gp ) do |plot|
+          plot.terminal "pngcairo enhanced size 800,700"
+          plot.output   "graphics/#{image}-hits.png"
+          plot.key      "left"
+          plot.title    title
+          plot.xlabel   "nível de concorrência"
+          plot.ylabel   "Requisições por segundo"
+          plot.grid     "y"
+          plot.style    "fill transparent solid 0.5 noborder"
+      
+          x = []
+          y = []
+          datafiles.map do |f|
+            log = parse_ab_log(f)
+            x << f.scan(/\d+/)[0].to_i
+            y << log['Requests per second'].scan(/\d+^.|\d+\.\d+/)[0].to_i
+          end
+   
+          plot.data << Gnuplot::DataSet.new([x,y]) do |ds|
+            ds.title = service
+            ds.with = "lines"
+            ds.smooth = "sbezier"
+            ds.linewidth = 3
+          end
+        
+        end
+      end
+  end
+  
   def error(message)
     puts "Falha: #{message}"
     exit -1
@@ -148,6 +193,11 @@ class Cenary1 < Thor
     say "Realizando o aquecimento da máquina #{ip}..."
     run "ab -r -n 2000 -c 10 #{url} > /dev/null"
     sleep 5
+  end
+  
+  def parse_ab_log(file)
+    f = File.open("logs/#{file}.log").read().scan(AB_LOG_PATTERN)
+    Hash[*f.collect {|a,b| [a,b]}.flatten]
   end
 
 end
