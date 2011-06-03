@@ -14,7 +14,7 @@ class Benchmark < Thor
     name = 'benchmark'
     
     say "Executando benchmark..."
-    run "ab -r -n #{options[:requests]} -c #{options[:concurrency]} -g raw/#{options[:name]}.tsv -e raw/#{options[:name]}.csv #{url} > logs/#{options[:name]}.log"
+    run "ab -r -k -n#{options[:requests]} -c #{options[:concurrency]} -g raw/#{options[:name]}.tsv -e raw/#{options[:name]}.csv #{url} > logs/#{options[:name]}.log"
   end
 
   protected
