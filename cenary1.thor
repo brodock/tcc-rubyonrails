@@ -43,9 +43,10 @@ class Cenary1 < Thor
    
     # nginx - hits    
     options = {:service => 'nginx', :image => 'nginx', :title => 'Benchmark NGINX - Performance'}
-    options[:files] = find_files("logs/nginx-*.log")
-
-    plot_log(options)
+    
+    plot_log(options) do |plot|
+      plot.data << log_dataset(find_files("logs/nginx-*.log"), 'nginx')
+    end
     
     
     # nginx - baixa concorrência
@@ -66,9 +67,9 @@ class Cenary1 < Thor
     
     # Apache2 - hits
     options = {:service => 'apache', :image => 'apache-perf', :title => 'Benchmark Apache2 - Performance'}
-    options[:files] = find_files("logs/apache-*.log")
-
-    plot_log(options)
+    plot_log(options) do |plot|
+      plot.data << log_dataset(find_files("logs/apache-*.log"), 'apache')
+    end
 
 
     # Apache 2 - baixa concorrência
@@ -85,6 +86,15 @@ class Cenary1 < Thor
     
     plot_tsv(options)
     plot_csv(options)
+    
+    
+    # Apache2 vs Nginx - hits
+    options = {:image => 'apache-vs-nginx', :title => 'Benchmark Apache2 vs NGINX - Performance'}
+    
+    plot_log(options) do |plot|
+      plot.data << log_dataset(find_files("logs/apache-*.log"), 'apache')
+      plot.data << log_dataset(find_files("logs/nginx-*.log"), 'nginx')
+    end
   end
 
   protected
