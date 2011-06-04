@@ -9,20 +9,14 @@ class Benchmark < Thor
   method_option :concurrency, :type => :numeric, :default => 10, :aliases => "-c"
   method_option :name, :type => :string, :default => 'benchmark'
   def execute(url)
-    error("URL Informada não é válida, deve seguir o padrão (http|https)://endereço/") unless url =~ URL_PATTERN
+    raise ArgumentError, 'URL must follow pattern (http|https)://address/' url =~ URL_PATTERN
     setup
-    name = 'benchmark'
     
     say "Executando benchmark..."
     run "ab -r -k -n#{options[:requests]} -c #{options[:concurrency]} -g raw/#{options[:name]}.tsv -e raw/#{options[:name]}.csv #{url} > logs/#{options[:name]}.log"
   end
 
   protected
-  def error(message)
-    puts "Falha: #{message}"
-    exit -1
-  end
-
   def setup()
     empty_directory 'logs'
     empty_directory 'raw'
