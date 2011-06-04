@@ -1,10 +1,12 @@
 class Cenary1 < Thor
   include Thor::Actions
+  include Graphs
 
   # modelo de regexp para validar IP
   IP_PATTERN = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})?$/
   # modelo de regexp para extrair valores do log do Apache Benchmark
   AB_LOG_PATTERN = /^([a-zA-Z]+[\s\-a-zA-Z]+):\s+(.+)/
+
 
   desc 'nginx IP', 'Executa o benchmark pré-definido no endereço informado'
   def nginx(machine_ip)
@@ -36,149 +38,55 @@ class Cenary1 < Thor
   
   desc 'graphics', 'Realiza a geração dos gráficos a partir dos testes realizados'
   def graphics()
-    empty_directory 'graphics'
+    empty_directory 'graphs'
    
-    # nginx - hits
-    
-    title = 'Benchmark NGINX - Performance'
-    image = 'nginx-perf'
-    service = 'nginx'
-    files = Dir.glob("logs/nginx-*.log").map{|f| File.basename(f, '.log')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
+    # nginx - hits    
+    options = {:service => 'nginx', :image => 'nginx', :title => 'Benchmark NGINX - Performance'}
+    options[:files] = Dir.glob("logs/nginx-*.log").map{|f| File.basename(f, '.log')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
 
-    plot_log(image, title, service, files)
+    plot_log(options)
+    
     
     # nginx - baixa concorrência
-    
-    title = 'Benchmark NGINX - baixa concorrência'
-    image = 'nginx-low'
-    files = Dir.glob("raw/nginx-??.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
+    options = {:image => 'nginx-low', :title => 'Benchmark NGINX - baixa concorrência'}
+    options[:files] = Dir.glob("raw/nginx-??.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
 
-    plot_tsv(image, title, files)
-    plot_csv(image, title, files)
+    plot_tsv(options)
+    plot_csv(options)
+    
     
     # nginx - alta concorrência
+    options = {:image => 'nginx-high', :title => 'Benchmark NGINX - alta concorrência'}
+    options[:files] = Dir.glob("raw/nginx-???.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
 
-    title = 'Benchmark NGINX - alta concorrência'
-    image = 'nginx-high'
-    files = Dir.glob("raw/nginx-???.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
+    plot_tsv(options)
+    plot_csv(options)
+    
+    
+    # Apache2 - hits
+    options = {:service => 'apache', :image => 'apache-perf', :title => 'Benchmark Apache2 - Performance'}
+    options[:files] = Dir.glob("logs/apache-*.log").map{|f| File.basename(f, '.log')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
 
-    plot_tsv(image, title, files)
-    plot_csv(image, title, files)
+    plot_log(options)
+
 
     # Apache 2 - baixa concorrência
+    options = {:image => 'apache-low', :title => 'Benchmark Apache2 - baixa concorrência'}
+    options[:files] = Dir.glob("raw/apache-??.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
     
-    title = 'Benchmark Apache2 - baixa concorrência'
-    image = 'apache-low'
-    files = Dir.glob("raw/apache-??.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
-    
-    plot_tsv(image, title, files)
-    plot_csv(image, title, files)
+    plot_tsv(options)
+    plot_csv(options)
+
     
     # Apache 2 - alta concorrência
+    options = {:image => 'apache-high', :title => 'Benchmark Apache2 - alta concorrência'}
+    options[:files] = Dir.glob("raw/apache-???.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
     
-    title = 'Benchmark Apache2 - alta concorrência'
-    image = 'apache-high'
-    files = Dir.glob("raw/apache-???.tsv").map{|f| File.basename(f, '.tsv')}.sort_by {|f| f.scan(/\d+/)[0].to_i }
-    
-    plot_tsv(image, title, files)
-    plot_csv(image, title, files)
+    plot_tsv(options)
+    plot_csv(options)
   end
 
-  protected
-  def plot_tsv(image, title, datafiles)
-    require 'gnuplot'
-    
-    Gnuplot.open do |gp|
-      Gnuplot::Plot.new( gp ) do |plot|
-        plot.terminal "pngcairo enhanced size 800,700"
-        plot.output   "graphics/#{image}.png"
-        plot.key      "left"
-        plot.title    title
-        plot.xlabel   "requisições"
-        plot.ylabel   "tempo de resposta (ms)"
-        plot.grid     "y"
-        plot.style     "fill transparent solid 0.5 noborder"
-        
-        
-        plot.data = datafiles.map do |f|
-          Gnuplot::DataSet.new() do |ds|
-            ds.data = "\"raw/#{f}.tsv\""
-            ds.using = "9"
-            ds.smooth = "sbezier"
-            ds.title = f
-            ds.with = "lines"
-            ds.linewidth = 3
-          end         
-        end
-        
-      end
-    end
-  end
-  
-  def plot_csv(image, title, datafiles)
-    require 'gnuplot'
-    
-    Gnuplot.open do |gp|
-      Gnuplot::Plot.new( gp ) do |plot|
-        plot.terminal "pngcairo enhanced size 800,700"
-        plot.output   "graphics/#{image}-grouped.png"
-        plot.key      "left"
-        plot.title    title
-        plot.xlabel   "% de requisições totais"
-        plot.ylabel   "tempo médio de resposta (ms)"
-        plot.grid     "y"
-        plot.style    "fill transparent solid 0.5 noborder"
-        plot.datafile "separator ','"
-        
-        
-        plot.data = datafiles.map do |f|
-          Gnuplot::DataSet.new() do |ds|
-            ds.data = "\"raw/#{f}.csv\""
-            ds.using = "2"
-            ds.smooth = "sbezier"
-            ds.title = f
-            ds.with = "lines"
-            ds.linewidth = 3
-          end         
-        end
-        
-      end
-    end
-  end
-  
-  def plot_log(image, title, service, datafiles)
-    require 'gnuplot'
-    
-      Gnuplot.open do |gp|
-        Gnuplot::Plot.new( gp ) do |plot|
-          plot.terminal "pngcairo enhanced size 800,700"
-          plot.output   "graphics/#{image}-hits.png"
-          plot.key      "left"
-          plot.title    title
-          plot.xlabel   "nível de concorrência"
-          plot.ylabel   "Requisições por segundo"
-          plot.grid     "y"
-          plot.style    "fill transparent solid 0.5 noborder"
-      
-          x = []
-          y = []
-          datafiles.map do |f|
-            log = parse_ab_log(f)
-            x << f.scan(/\d+/)[0].to_i
-            y << log['Requests per second'].scan(/\d+^.|\d+\.\d+/)[0].to_i
-          end
-   
-          plot.data << Gnuplot::DataSet.new([x,y]) do |ds|
-            ds.title = service
-            ds.with = "lines"
-            ds.smooth = "sbezier"
-            ds.linewidth = 3
-          end
-        
-        end
-      end
-  end
-  
+  protected   
   def error(message)
     puts "Falha: #{message}"
     exit -1
