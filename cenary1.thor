@@ -9,9 +9,9 @@ class Cenary1 < Thor
   # modelo de regexp para validar IP
   IP_PATTERN = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})?$/
 
-  desc 'nginx IP', 'Executa o benchmark pré-definido no endereço informado'
+  desc 'nginx IP', 'Executa o benchmark do nginx no endereço informado'
   def nginx(machine_ip)
-    error 'Endereço de IP inválido' unless machine_ip =~ IP_PATTERN
+    raise ArgumentError, 'Endereço de IP inválido' unless machine_ip =~ IP_PATTERN
 
     url = "http://#{machine_ip}/"
     concurrency = (1..4).map{|x| x*20}
@@ -23,9 +23,23 @@ class Cenary1 < Thor
     end
   end
   
-  desc 'apache IP', 'Executa o benchmark pré-definido no endereço informado'
+  desc 'nginx_passenger IP', 'Executa o benchmark do nginx + Passenger no endereço informado'
+  def nginx_passenger(machine_ip)
+    raise ArgumentError, 'Endereço de IP inválido' unless machine_ip =~ IP_PATTERN
+
+    url = "http://#{machine_ip}/"
+    concurrency = (1..4).map{|x| x*20}
+    concurrency += (1..5).map{|x| x*100}
+    
+    concurrency.each do |c|
+        restart machine_ip, 'nginx'
+        thor :benchmark, :execute, "#{url} -n 30000 -c #{c} --name=nginx-passenger-#{c}"
+    end
+  end
+  
+  desc 'apache IP', 'Executa o benchmark do Apache2 no endereço informado'
   def apache(machine_ip)
-    error 'Endereço de IP inválido' unless machine_ip =~ IP_PATTERN
+    raise ArgumentError, 'Endereço de IP inválido' unless machine_ip =~ IP_PATTERN
 
     url = "http://#{machine_ip}/"
     concurrency = (1..4).map{|x| x*20}
@@ -37,8 +51,22 @@ class Cenary1 < Thor
     end
   end
   
-  desc 'graphics', 'Realiza a geração dos gráficos a partir dos testes realizados'
-  def graphics()
+  desc 'apache_passenger IP', 'Executa o benchmark do Apache2 + Passenger no endereço informado'
+  def apache_passenger(machine_ip)
+    raise ArgumentError, 'Endereço de IP inválido' unless machine_ip =~ IP_PATTERN
+
+    url = "http://#{machine_ip}/"
+    concurrency = (1..4).map{|x| x*20}
+    concurrency += (1..5).map{|x| x*100}
+    
+    concurrency.each do |c|
+        restart machine_ip, 'apache2'
+        thor :benchmark, :execute, "#{url} -n 30000 -c #{c} --name=apache-passenger-#{c}"
+    end
+  end
+  
+  desc 'graphs_standalone', 'Realiza a geração dos gráficos dos testes com servidores em standalone'
+  def graphs_standalone()
     empty_directory 'graphs'
    
     # nginx - hits    
