@@ -61,7 +61,7 @@ module Graphs
         plot.title    options[:title]
         plot.xlabel   "Conexões concorrentes"
         plot.ylabel   "Requisições por segundo"
-        plot.grid     "y"
+        plot.grid     "x y"
         plot.style    "fill transparent solid 0.5 noborder"
                 
         yield plot if block_given?
@@ -111,7 +111,8 @@ module Graphs
       ds.title = title
       ds.with = "lines"
       ds.smooth = "sbezier"
-      ds.linewidth = 3
+      ds.linewidth = 4
+      ds.using = "1:2:xtic(1)"
     end
   end
 end

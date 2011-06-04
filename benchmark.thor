@@ -9,7 +9,7 @@ class Benchmark < Thor
   method_option :concurrency, :type => :numeric, :default => 10, :aliases => "-c"
   method_option :name, :type => :string, :default => 'benchmark'
   def execute(url)
-    raise ArgumentError, 'URL must follow pattern (http|https)://address/' url =~ URL_PATTERN
+    raise ArgumentError, 'URL must follow pattern (http|https)://address/' unless url =~ URL_PATTERN
     setup
     
     say "Executando benchmark..."
