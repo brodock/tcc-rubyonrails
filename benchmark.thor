@@ -11,17 +11,21 @@ class Benchmark < Thor
   method_option :package, :type => :string, :default => ''
   def execute(url)
     raise ArgumentError, 'URL must follow pattern (http|https)://address/' unless url =~ URL_PATTERN
-    setup
+    setup(options[:package])
     
-    options[:package] = options[:package] + '/' unless options[:package].empty?
+    package = options[:package].empty? ? '' : options[:package] + '/'
     
     say "Executando benchmark..."
-    run "ab -r -k -n#{options[:requests]} -c #{options[:concurrency]} -g raw/#{options[:package]}#{options[:name]}.tsv -e raw/#{options[:package]}#{options[:name]}.csv #{url} > logs/#{options[:name]}.log"
+    run "ab -r -k -n#{options[:requests]} -c #{options[:concurrency]} -g raw/#{package}#{options[:name]}.tsv -e raw/#{package}#{options[:name]}.csv #{url} > logs/#{package}#{options[:name]}.log"
   end
 
   protected
-  def setup()
+  def setup(package='')
     empty_directory 'logs'
     empty_directory 'raw'
+    unless package.empty?
+      empty_directory "logs/#{package}"
+      empty_directory "raw/#{package}"
+    end
   end
 end
