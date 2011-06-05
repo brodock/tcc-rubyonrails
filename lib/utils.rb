@@ -17,7 +17,6 @@ module Utils
   
   # Abre o arquivo de log informado e captura todas as tuplas "<Nome da métrica>: <Valor da Métrica>"
   def parse_ab_log(file)
-  puts file
     f = File.open(file).read().scan(AB_LOG_PATTERN)
     Hash[*f.collect {|a,b| [a,b]}.flatten]
   end

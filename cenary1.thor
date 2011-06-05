@@ -120,6 +120,7 @@ class Cenary1 < Thor
     # Apache2 vs Nginx - hits
     options = {:image => 'apache-vs-nginx', :title => 'Benchmark Apache2 vs NGINX - Performance'}
     plot_log(options) do |plot|
+      plot.key "left bottom"
       plot.data << log_dataset(find_files("logs/standalone/apache-*.log"), 'apache')
       plot.data << log_dataset(find_files("logs/standalone/nginx-*.log"), 'nginx')
     end
@@ -135,7 +136,7 @@ class Cenary1 < Thor
     
     # Apache2 + Passenger: hits
     options = {:image => 'apache-passenger', :title => 'Benchmark Apache2 + Passenger: Performance'}
-    plot_log(options) { |plot| plot.data << log_dataset(find_files("logs/passenger/apache-passenger-*.log"), 'apache') }
+    plot_log(options) { |plot| plot.data << log_dataset(find_files("logs/passenger/apache-passenger-*.log"), 'apache+passenger') }
 
 
     # Apache 2 + Passenger: baixa concorrência
@@ -152,7 +153,7 @@ class Cenary1 < Thor
 
     # nginx + Passenger: hits    
     options = {:image => 'nginx-passenger', :title => 'Benchmark NGINX + Passenger - Performance'}
-    plot_log(options) { |plot| plot.data << log_dataset(find_files("logs/passenger/nginx-passenger-*.log"), 'nginx') }
+    plot_log(options) { |plot| plot.data << log_dataset(find_files("logs/passenger/nginx-passenger-*.log"), 'nginx+passenger') }
     
     
     # nginx + Passenger: baixa concorrência

@@ -8,7 +8,7 @@ module Graphs
     
     Gnuplot.open do |gp|
       Gnuplot::Plot.new( gp ) do |plot|
-        plot.terminal "pngcairo enhanced size 800,700"
+        plot.terminal "pngcairo enhanced size 700,600"
         plot.output   "graphs/#{options[:image]}.png"
         plot.key      "left"
         plot.title    options[:title]
@@ -29,7 +29,7 @@ module Graphs
     
     Gnuplot.open do |gp|
       Gnuplot::Plot.new( gp ) do |plot|
-        plot.terminal "pngcairo enhanced size 800,700"
+        plot.terminal "pngcairo enhanced size 700,600"
         plot.output   "graphs/#{options[:image]}-grouped.png"
         plot.key      "left"
         plot.title    options[:title]
@@ -51,7 +51,7 @@ module Graphs
     
     Gnuplot.open do |gp|
       Gnuplot::Plot.new( gp ) do |plot|
-        plot.terminal "pngcairo enhanced size 800,700"
+        plot.terminal "pngcairo enhanced size 700,600"
         plot.output   "graphs/#{options[:image]}-perf.png"
         plot.key      "left"
         plot.title    options[:title]
