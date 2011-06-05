@@ -9,6 +9,10 @@ class Cenary1 < Thor
   # modelo de regexp para validar IP
   IP_PATTERN = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})?$/
 
+  #
+  # Benchmarks
+  #
+  
   desc 'nginx IP', 'Executa o benchmark do nginx no endereço informado'
   def nginx(machine_ip)
     raise ArgumentError, 'Endereço de IP inválido' unless machine_ip =~ IP_PATTERN
@@ -19,7 +23,7 @@ class Cenary1 < Thor
     
     concurrency.each do |c|
         restart machine_ip, 'nginx'
-        thor :benchmark, :execute, "#{url} -n 30000 -c #{c} --name=nginx-#{c}"
+        thor :benchmark, :execute, "#{url} -n 30000 -c #{c} --name=nginx-#{c} --package=standalone"
     end
   end
   
@@ -29,11 +33,11 @@ class Cenary1 < Thor
 
     url = "http://#{machine_ip}/"
     concurrency = (1..4).map{|x| x*20}
-    concurrency += (1..5).map{|x| x*100}
+    concurrency << 100
     
     concurrency.each do |c|
         restart machine_ip, 'nginx'
-        thor :benchmark, :execute, "#{url} -n 30000 -c #{c} --name=nginx-passenger-#{c}"
+        thor :benchmark, :execute, "#{url} -n 30000 -c #{c} --name=nginx-passenger-#{c} --package=standalone"
     end
   end
   
@@ -47,7 +51,7 @@ class Cenary1 < Thor
     
     concurrency.each do |c|
         restart machine_ip, 'apache2'
-        thor :benchmark, :execute, "#{url} -n 30000 -c #{c} --name=apache-#{c}"
+        thor :benchmark, :execute, "#{url} -n 30000 -c #{c} --name=apache-#{c} --package=passenger"
     end
   end
   
@@ -61,67 +65,113 @@ class Cenary1 < Thor
     
     concurrency.each do |c|
         restart machine_ip, 'apache2'
-        thor :benchmark, :execute, "#{url} -n 30000 -c #{c} --name=apache-passenger-#{c}"
+        thor :benchmark, :execute, "#{url} -n 30000 -c #{c} --name=apache-passenger-#{c} --package=passenger"
     end
   end
+  
+  desc 'graphs', 'Realiza a geração de todos os gráficos do cenário'
+  def graphs()
+    invoke 'graphs_standalone'
+    invoke 'graphs_passenger'
+  end
+
+  #
+  # Graficos - Servidor Standalone
+  #
   
   desc 'graphs_standalone', 'Realiza a geração dos gráficos dos testes com servidores em standalone'
   def graphs_standalone()
     empty_directory 'graphs'
    
     # nginx - hits    
-    options = {:service => 'nginx', :image => 'nginx', :title => 'Benchmark NGINX - Performance'}
+    options = {:image => 'nginx', :title => 'Benchmark NGINX - Performance'}    
+    plot_log(options) { |plot| plot.data << log_dataset(find_files("logs/standalone/nginx-*.log"), 'nginx') }
     
-    plot_log(options) do |plot|
-      plot.data << log_dataset(find_files("logs/nginx-*.log"), 'nginx')
-    end
-    
-    
+
     # nginx - baixa concorrência
     options = {:image => 'nginx-low', :title => 'Benchmark NGINX - baixa concorrência'}
-    options[:files] = find_files("raw/nginx-??.tsv")
+    plot_tsv(options) { |plot| plot.data = tsv_datasets(find_files("raw/standalone/nginx-??.tsv")) }
+    plot_csv(options) { |plot| plot.data = csv_datasets(find_files("raw/standalone/nginx-??.csv")) }
 
-    plot_tsv(options)
-    plot_csv(options)
-    
     
     # nginx - alta concorrência
     options = {:image => 'nginx-high', :title => 'Benchmark NGINX - alta concorrência'}
-    options[:files] = find_files("raw/nginx-???.tsv")
+    plot_tsv(options) { |plot| plot.data = tsv_datasets(find_files("raw/standalone/nginx-???.tsv")) }
+    plot_csv(options) { |plot| plot.data = csv_datasets(find_files("raw/standalone/nginx-???.csv")) }
+    
 
-    plot_tsv(options)
-    plot_csv(options)
-    
-    
     # Apache2 - hits
-    options = {:service => 'apache', :image => 'apache-perf', :title => 'Benchmark Apache2 - Performance'}
-    plot_log(options) do |plot|
-      plot.data << log_dataset(find_files("logs/apache-*.log"), 'apache')
-    end
+    options = {:image => 'apache', :title => 'Benchmark Apache2 - Performance'}
+    plot_log(options) { |plot| plot.data << log_dataset(find_files("logs/standalone/apache-*.log"), 'apache') }
 
 
     # Apache 2 - baixa concorrência
     options = {:image => 'apache-low', :title => 'Benchmark Apache2 - baixa concorrência'}
-    options[:files] = find_files("raw/apache-??.tsv")
-    
-    plot_tsv(options)
-    plot_csv(options)
+    plot_tsv(options) { |plot| plot.data = tsv_datasets(find_files("raw/standalone/apache-??.tsv")) }
+    plot_csv(options) { |plot| plot.data = csv_datasets(find_files("raw/standalone/apache-??.csv")) }
 
     
     # Apache 2 - alta concorrência
     options = {:image => 'apache-high', :title => 'Benchmark Apache2 - alta concorrência'}
-    options[:files] = find_files("raw/apache-???.tsv")
-    
-    plot_tsv(options)
-    plot_csv(options)
+    plot_tsv(options) { |plot| plot.data = tsv_datasets(find_files("raw/standalone/apache-???.tsv")) }
+    plot_csv(options) { |plot| plot.data = csv_datasets(find_files("raw/standalone/apache-???.csv")) }
     
     
     # Apache2 vs Nginx - hits
     options = {:image => 'apache-vs-nginx', :title => 'Benchmark Apache2 vs NGINX - Performance'}
+    plot_log(options) do |plot|
+      plot.data << log_dataset(find_files("logs/standalone/apache-*.log"), 'apache')
+      plot.data << log_dataset(find_files("logs/standalone/nginx-*.log"), 'nginx')
+    end
+  end
+  
+  #
+  # Gráficos servidor + passenger
+  #
+  
+  desc 'graphs_passenger', 'Realiza a geração dos gráficos dos testes com servidores com passenger'
+  def graphs_passenger()
+    empty_directory 'graphs'   
+    
+    # Apache2 + Passenger: hits
+    options = {:image => 'apache-passenger', :title => 'Benchmark Apache2 + Passenger: Performance'}
+    plot_log(options) { |plot| plot.data << log_dataset(find_files("logs/passenger/apache-passenger-*.log"), 'apache') }
+
+
+    # Apache 2 + Passenger: baixa concorrência
+    options = {:image => 'apache-low-passenger', :title => 'Benchmark Apache2 + Passenger: baixa concorrência'}
+    plot_tsv(options) { |plot| plot.data = tsv_datasets(find_files("raw/passenger/apache-passenger-??.tsv")) }
+    plot_csv(options) { |plot| plot.data = csv_datasets(find_files("raw/passenger/apache-passenger-??.csv")) }
+
+    
+    # Apache 2 + Passenger: alta concorrência
+    options = {:image => 'apache-high-passenger', :title => 'Benchmark Apache2 + Passenger: alta concorrência'}    
+    plot_tsv(options) { |plot| plot.data = tsv_datasets(find_files("raw/passenger/apache-passenger-???.tsv")) }
+    plot_csv(options) { |plot| plot.data = csv_datasets(find_files("raw/passenger/apache-passenger-???.csv")) }
+    
+
+    # nginx + Passenger: hits    
+    options = {:image => 'nginx-passenger', :title => 'Benchmark NGINX + Passenger - Performance'}
+    plot_log(options) { |plot| plot.data << log_dataset(find_files("logs/passenger/nginx-passenger-*.log"), 'nginx') }
+    
+    
+    # nginx + Passenger: baixa concorrência
+    options = {:image => 'nginx-passenger-low', :title => 'Benchmark NGINX + Passenger: baixa concorrência'}
+    plot_tsv(options) { |plot| plot.data = tsv_datasets(find_files("raw/passenger/nginx-passenger-??.tsv")) }
+    plot_csv(options) { |plot| plot.data = csv_datasets(find_files("raw/passenger/nginx-passenger-??.csv")) }
+    
+    
+    # nginx + Passenger: alta concorrência
+    options = {:image => 'nginx-passenger-high', :title => 'Benchmark NGINX + Passenger: alta concorrência'}
+    plot_tsv(options) { |plot| plot.data = tsv_datasets(find_files("raw/passenger/nginx-passenger-???.tsv")) }
+    plot_csv(options) { |plot| plot.data = csv_datasets(find_files("raw/passenger/nginx-passenger-???.csv")) }
+    
+    # Apache2 + Passenger: Passenger vs Nginx + Passenger: hits
+    options = {:image => 'apache-passenger-vs-nginx-passenger', :title => 'Benchmark Apache2 + Passenger vs NGINX + Passenger: Performance'}
     
     plot_log(options) do |plot|
-      plot.data << log_dataset(find_files("logs/apache-*.log"), 'apache')
-      plot.data << log_dataset(find_files("logs/nginx-*.log"), 'nginx')
+      plot.data << log_dataset(find_files("logs/passenger/apache-passenger-*.log"), 'apache+passenger')
+      plot.data << log_dataset(find_files("logs/passenger/nginx-passenger-*.log"), 'nginx+passenger')
     end
   end
 

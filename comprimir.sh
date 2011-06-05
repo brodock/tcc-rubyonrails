@@ -1,2 +1,2 @@
 #!/bin/bash
-tar jcvf benchmark.tar.bz2 raw/ logs/
+tar jcvf benchmark.tar.bz2 raw/ logs/ graphics/

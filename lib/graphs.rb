@@ -17,8 +17,6 @@ module Graphs
         plot.grid     "y"
         plot.style     "fill transparent solid 0.5 noborder"
         
-        plot.data = tsv_datasets(options[:files])
-        
         yield plot if block_given?
         
       end
@@ -40,8 +38,6 @@ module Graphs
         plot.grid     "y"
         plot.style    "fill transparent solid 0.5 noborder"
         plot.datafile "separator ','"
-        
-        plot.data = csv_datasets(options[:files])
         
         yield plot if block_given?
         
@@ -75,10 +71,10 @@ module Graphs
   def tsv_datasets(files)
     files.map do |file|
       Gnuplot::DataSet.new() do |ds|
-        ds.data = "\"raw/#{file}.tsv\""
+        ds.data = "\"#{file}\""
         ds.using = "9"
         ds.smooth = "sbezier"
-        ds.title = file
+        ds.title = File.basename(file, File.extname(file))
         ds.with = "lines"
         ds.linewidth = 3
       end         
@@ -88,10 +84,10 @@ module Graphs
   def csv_datasets(files)
     files.map do |file|
       Gnuplot::DataSet.new() do |ds|
-        ds.data = "\"raw/#{file}.csv\""
+        ds.data = "\"#{file}\""
         ds.using = "2"
         ds.smooth = "sbezier"
-        ds.title = file
+        ds.title = File.basename(file, File.extname(file))
         ds.with = "lines"
         ds.linewidth = 3
       end         
