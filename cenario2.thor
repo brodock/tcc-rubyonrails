@@ -35,10 +35,10 @@ class Cenario2 < Thor
     raise ArgumentError, 'Endereço de IP inválido' unless machine_ip =~ IP_PATTERN
 
     url = "http://#{machine_ip}/"
-    concurrency << 50
+    concurrency = [50]
     
     concurrency.each do |c|
-        restart machine_ip, 'apache2'
+        restart2 machine_ip, 'apache2'
         thor :benchmark, :execute, "#{url} -n 30000 -c #{c} --name=teste2-nodes#{nodes}-#{c} --package=cenario2"
     end
   end
@@ -71,6 +71,16 @@ class Cenario2 < Thor
         plot.data << log_dataset(find_files("logs/cenario2/teste1-#{machine}-*.log"), machine)
       end
     end
+
+    options = {:image => "teste2", :title => "Benchmark Cenário 2 - Teste2: Performance"}
+    plot_tsv(options) { |plot| plot.data = tsv_datasets(find_files("raw/cenario2/teste2-*.tsv")) }
+    plot_csv(options) { |plot| plot.data = csv_datasets(find_files("raw/cenario2/teste2-*.csv")) }
+    
+    options = {:image => "teste2-grouped", :title => "Benchmark Cenário 2 - Teste2: Performance"}    
+    plot_log(options) do |plot|
+        plot.data << log_dataset(find_files("logs/cenario2/teste2-nodes1*.log"), '1 nodo')
+        plot.data << log_dataset(find_files("logs/cenario2/teste2-nodes2*.log"), '2 nodos')
+      end   
   end
   
   protected
@@ -84,4 +94,15 @@ class Cenario2 < Thor
     run "ab -r -n 2000 -c 10 #{url} > /dev/null"
     sleep 20
   end
+  def restart2(ip, service_name)
+    url = "http://#{ip}/"
+    say "Reiniciando #{service_name}..."
+    run "ssh root@apache2.local \"service #{service_name} restart\""
+    run "ssh root@apache2-clone.local \"service #{service_name} restart\""
+    sleep 5
+
+    say "Realizando o aquecimento da máquina #{ip}..."
+    run "ab -r -n 2000 -c 10 #{url} > /dev/null"
+    sleep 20
+  end  
 end
