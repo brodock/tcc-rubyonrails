@@ -99,7 +99,7 @@ module Graphs
     y = []
     files.map do |file|
       log = parse_ab_log(file)
-      x << file.scan(/\d+/)[0].to_i
+      x << log['Concurrency Level']
       y << log['Requests per second'].scan(/\d+^.|\d+\.\d+/)[0].to_i
     end
 

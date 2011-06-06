@@ -97,7 +97,10 @@ class Cenary1 < Thor
     # nginx - alta concorrência
     options = {:image => 'nginx-high', :title => 'Benchmark NGINX - alta concorrência'}
     plot_tsv(options) { |plot| plot.data = tsv_datasets(find_files("raw/standalone/nginx-???.tsv")) }
-    plot_csv(options) { |plot| plot.data = csv_datasets(find_files("raw/standalone/nginx-???.csv")) }
+    plot_csv(options) do |plot| 
+      plot.terminal "pngcairo enhanced size 700,450"
+      plot.data = csv_datasets(find_files("raw/standalone/nginx-???.csv"))
+    end
     
 
     # Apache2 - hits
@@ -114,7 +117,10 @@ class Cenary1 < Thor
     # Apache 2 - alta concorrência
     options = {:image => 'apache-high', :title => 'Benchmark Apache2 - alta concorrência'}
     plot_tsv(options) { |plot| plot.data = tsv_datasets(find_files("raw/standalone/apache-???.tsv")) }
-    plot_csv(options) { |plot| plot.data = csv_datasets(find_files("raw/standalone/apache-???.csv")) }
+    plot_csv(options) do |plot|
+      plot.terminal "pngcairo enhanced size 700,450"
+      plot.data = csv_datasets(find_files("raw/standalone/apache-???.csv"))
+    end
     
     
     # Apache2 vs Nginx - hits
@@ -174,12 +180,22 @@ class Cenary1 < Thor
       plot.data << log_dataset(find_files("logs/passenger/apache-passenger-*.log"), 'apache+passenger')
       plot.data << log_dataset(find_files("logs/passenger/nginx-passenger-*.log"), 'nginx+passenger')
     end
+    
+    # Apache2 e Nginx vs Apache2 + Passenger e Nginx + Passenger: hits
+    options = {:image => 'apache-nginx-standalone-vs-passenger', :title => 'Benchmark [Apache2, Nginx] vs [Apache2, Nginx] + Passenger: Performance'}
+    
+    plot_log(options) do |plot|
+      plot.data << log_dataset(find_files("logs/standalone/apache-*.log"), 'apache')
+      plot.data << log_dataset(find_files("logs/standalone/nginx-*.log"), 'nginx')
+      plot.data << log_dataset(find_files("logs/passenger/apache-passenger-*.log"), 'apache+passenger')
+      plot.data << log_dataset(find_files("logs/passenger/nginx-passenger-*.log"), 'nginx+passenger')
+    end
   end
 
   protected
   def restart(ip, service_name)
     url = "http://#{ip}/"
-    say "Reiniciando serviço do nginx..."
+    say "Reiniciando #{service_name}..."
     run "ssh root@#{ip} \"service #{service_name} restart\""
     sleep 5
 
