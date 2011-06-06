@@ -6,7 +6,7 @@ module Utils
   # Realiza a listagem de arquivos de um determinado diretório, seguindo o padrão informado.
   # Os arquivos são ordenados pela sua numeração
   def find_files(file_pattern)
-    Dir.glob(file_pattern).map.sort_by {|f| f.scan(/\d+/)[0].to_i }
+    Dir.glob(file_pattern).map.sort_by {|f| f.scan(/\d+/).last.to_i }
   end
   
   # Exibe uma mensagem de erro e finaliza a aplicação
